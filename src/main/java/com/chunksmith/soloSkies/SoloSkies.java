@@ -3,6 +3,7 @@ package com.chunksmith.soloSkies;
 import com.chunksmith.soloSkies.commands.PTimeCommand;
 import com.chunksmith.soloSkies.commands.PWeatherCommand;
 import com.chunksmith.soloSkies.gui.SoloSkiesMenu;
+import com.chunksmith.soloSkies.manager.ApplyService;
 import com.chunksmith.soloSkies.manager.TempOverrideManager;
 import com.chunksmith.soloSkies.store.PlayerStore;
 import org.bukkit.Bukkit;
@@ -20,24 +21,27 @@ public class SoloSkies extends JavaPlugin implements Listener {
     private PlayerStore store;
     private SoloSkiesMenu menu;
     private TempOverrideManager tempManager;
+    private ApplyService applyService;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
         this.store = new PlayerStore(this);
         this.tempManager = new TempOverrideManager(this, store);
+        this.applyService = new ApplyService(this);
         this.menu = new SoloSkiesMenu(this, store);
 
         getServer().getPluginManager().registerEvents(this, this);
         getServer().getPluginManager().registerEvents(menu, this);
+        getServer().getPluginManager().registerEvents(applyService, this);
 
         if (getCommand("ptime") != null) {
-            PTimeCommand pt = new PTimeCommand(this, store, tempManager);
+            PTimeCommand pt = new PTimeCommand(this, store, tempManager, applyService);
             getCommand("ptime").setExecutor(pt);
             getCommand("ptime").setTabCompleter(pt);
         }
         if (getCommand("pweather") != null) {
-            PWeatherCommand pw = new PWeatherCommand(this, store, tempManager);
+            PWeatherCommand pw = new PWeatherCommand(this, store, tempManager, applyService);
             getCommand("pweather").setExecutor(pw);
             getCommand("pweather").setTabCompleter(pw);
         }
@@ -61,6 +65,7 @@ public class SoloSkies extends JavaPlugin implements Listener {
     @Override
     public void onDisable() {
         if (tempManager != null) tempManager.cancelAll();
+        if (applyService != null) applyService.cancelAll();
         store.save();
     }
 

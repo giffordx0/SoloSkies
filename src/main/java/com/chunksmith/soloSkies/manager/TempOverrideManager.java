@@ -3,7 +3,6 @@ package com.chunksmith.soloSkies.manager;
 import com.chunksmith.soloSkies.SoloSkies;
 import com.chunksmith.soloSkies.store.PlayerStore;
 import com.chunksmith.soloSkies.util.Msg;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.WeatherType;
 import org.bukkit.entity.Player;
@@ -17,7 +16,6 @@ public class TempOverrideManager {
 
     private final SoloSkies plugin;
     private final PlayerStore store;
-    private final MiniMessage mm = MiniMessage.miniMessage();
     private final Msg msg;
 
     private final Map<UUID, BukkitTask> timeTasks = new HashMap<>();
@@ -34,27 +32,15 @@ public class TempOverrideManager {
         cancelTime(p.getUniqueId());
         p.setPlayerTime(absoluteTicks, false);
 
-        String prefix = plugin.getConfig().getString("messages.prefix", "<gray>[SoloSkies]</gray> ");
-        String chat = plugin.getConfig().getString("messages.temp-time-set",
-                        "<green>Time set to <white><time></white> for <white><duration></white>.</green>")
-                .replace("<time>", display).replace("<duration>", prettyDuration);
-        p.sendMessage(mm.deserialize(prefix + chat));
-
-        // Action bar pulse
-        String ab = plugin.getConfig().getString("messages.action-time-set", "<white>Time:</white> <aqua><time></aqua>");
-        msg.sendActionBar(p, ab, new String[][]{{"time", display}});
+        msg.send(p, "temp-time-set", new String[][]{{"time", display}, {"duration", prettyDuration}});
+        msg.sendActionBar(p, "action-time-set", new String[][]{{"time", display}});
 
         BukkitTask task = Bukkit.getScheduler().runTaskLater(plugin, () -> {
             Player cur = Bukkit.getPlayer(p.getUniqueId());
             if (cur != null && cur.isOnline()) {
                 store.apply(cur);
-                String expire = plugin.getConfig().getString("messages.temp-time-expired",
-                        "<yellow>Your temporary time expired. Restored.</yellow>");
-                cur.sendMessage(mm.deserialize(prefix + expire));
-
-                // Action bar on expiry
-                String abx = plugin.getConfig().getString("messages.action-temp-expired", "<yellow>Temporary override ended</yellow>");
-                msg.sendActionBar(cur, abx, null);
+                msg.send(cur, "temp-time-expired", null);
+                msg.sendActionBar(cur, "action-temp-expired", null);
             }
             timeTasks.remove(p.getUniqueId());
         }, durationTicks);
@@ -67,27 +53,15 @@ public class TempOverrideManager {
         cancelWeather(p.getUniqueId());
         p.setPlayerWeather(wt);
 
-        String prefix = plugin.getConfig().getString("messages.prefix", "<gray>[SoloSkies]</gray> ");
-        String chat = plugin.getConfig().getString("messages.temp-weather-set",
-                        "<green>Weather set to <white><weather></white> for <white><duration></white>.</green>")
-                .replace("<weather>", display).replace("<duration>", prettyDuration);
-        p.sendMessage(mm.deserialize(prefix + chat));
-
-        // Action bar pulse
-        String ab = plugin.getConfig().getString("messages.action-weather-set", "<white>Weather:</white> <aqua><weather></aqua>");
-        msg.sendActionBar(p, ab, new String[][]{{"weather", display}});
+        msg.send(p, "temp-weather-set", new String[][]{{"weather", display}, {"duration", prettyDuration}});
+        msg.sendActionBar(p, "action-weather-set", new String[][]{{"weather", display}});
 
         BukkitTask task = Bukkit.getScheduler().runTaskLater(plugin, () -> {
             Player cur = Bukkit.getPlayer(p.getUniqueId());
             if (cur != null && cur.isOnline()) {
                 store.apply(cur);
-                String expire = plugin.getConfig().getString("messages.temp-weather-expired",
-                        "<yellow>Your temporary weather expired. Restored.</yellow>");
-                cur.sendMessage(mm.deserialize(prefix + expire));
-
-                // Action bar on expiry
-                String abx = plugin.getConfig().getString("messages.action-temp-expired", "<yellow>Temporary override ended</yellow>");
-                msg.sendActionBar(cur, abx, null);
+                msg.send(cur, "temp-weather-expired", null);
+                msg.sendActionBar(cur, "action-temp-expired", null);
             }
             weatherTasks.remove(p.getUniqueId());
         }, durationTicks);
