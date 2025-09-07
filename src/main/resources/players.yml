@@ -1,0 +1,4 @@
+players:
+  <uuid>:
+    time: 6000        # null/absent means "reset"
+    weather: "SUN"    # SUN | RAIN | THUNDER | null

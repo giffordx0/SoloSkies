@@ -1,0 +1,18 @@
+persist:
+  reapply-on-join: true
+  reapply-on-world-change: true
+
+logging:
+  console-actions: true
+
+warmup:
+  enabled: true
+  seconds: 3
+  cancel-on-move: true
+
+cooldown:
+  time-seconds: 5
+  weather-seconds: 5
+
+# language support
+language: "en"   # looks for lang/messages_en.yml

@@ -1,0 +1,23 @@
+prefix: "<gray>[<aqua>SoloSkies</aqua>]</gray> "
+
+set-time: "<green>Time set to <white><time></white>.</green>"
+add-time: "<green>Added <white><delta></white> ticks. New: <white><time></white>.</green>"
+reset-time: "<yellow>Personal time reset to server time.</yellow>"
+set-weather: "<green>Weather set to <white><weather></white>.</green>"
+reset-weather: "<yellow>Personal weather reset.</yellow>"
+
+no-perms: "<red>You don't have permission.</red>"
+player-not-found: "<red>Player not found.</red>"
+
+temp-time-set: "<green>Time set to <white><time></white> for <white><duration></white>.</green>"
+temp-weather-set: "<green>Weather set to <white><weather></white> for <white><duration></white>.</green>"
+temp-time-expired: "<yellow>Your temporary time expired. Restored.</yellow>"
+temp-weather-expired: "<yellow>Your temporary weather expired. Restored.</yellow>"
+
+action-time-set: "<white>Time:</white> <aqua><time></aqua>"
+action-weather-set: "<white>Weather:</white> <aqua><weather></aqua>"
+action-temp-expired: "<yellow>Temporary override ended</yellow>"
+
+warmup-start: "<gray>Applying in <white><seconds>s</white>… don't move.</gray>"
+warmup-cancel: "<red>Warm-up cancelled because you moved.</red>"
+cooldown-active: "<red>You're on cooldown for <white><seconds>s</white>.</red>"

@@ -1,0 +1,48 @@
+name: SoloSkies
+version: '0.1.0-SNAPSHOT'
+main: com.chunksmith.soloSkies.SoloSkies
+api-version: '1.21'
+website: "https://chunksmith.com"
+authors: [ Chunksmith ]
+commands:
+  ptime:
+    description: Personal time controls
+    usage: /ptime <day|night|noon|midnight|set <ticks>|add <ticks>|reset> [duration] [player]
+    aliases: [pt]
+    permission: soloskies.ptime.self
+  pweather:
+    description: Personal weather controls
+    usage: /pweather <sun|rain|thunder|reset> [duration] [player]
+    aliases: [pw]
+    permission: soloskies.pweather.self
+  skies:
+    description: Open SoloSkies GUI
+    usage: /skies
+    permission: soloskies.gui
+
+permissions:
+  soloskies.*:
+    children:
+      soloskies.ptime.self: true
+      soloskies.ptime.others: true
+      soloskies.ptime.reset: true
+      soloskies.pweather.self: true
+      soloskies.pweather.others: true
+      soloskies.pweather.reset: true
+      soloskies.gui: true
+      soloskies.bypass.cooldown: true
+      soloskies.bypass.warmup: true
+
+  soloskies.ptime.self: { default: true }
+  soloskies.ptime.others: { default: op }
+  soloskies.ptime.reset: { default: op }
+
+  soloskies.pweather.self: { default: true }
+  soloskies.pweather.others: { default: op }
+  soloskies.pweather.reset: { default: op }
+
+  soloskies.gui: { default: true }
+
+  # NEW bypass permissions
+  soloskies.bypass.cooldown: { default: op }
+  soloskies.bypass.warmup: { default: op }
