@@ -1,6 +1,7 @@
 package com.chunksmith.soloSkies.commands;
 
 import com.chunksmith.soloSkies.SoloSkies;
+import com.chunksmith.soloSkies.manager.ApplyService;
 import com.chunksmith.soloSkies.manager.TempOverrideManager;
 import com.chunksmith.soloSkies.store.PlayerStore;
 import com.chunksmith.soloSkies.util.DurationUtil;
@@ -16,10 +17,11 @@ public class PTimeCommand implements TabExecutor {
     private final SoloSkies plugin;
     private final PlayerStore store;
     private final TempOverrideManager temps;
+    private final ApplyService applyService;
     private final Msg msg;
 
-    public PTimeCommand(SoloSkies plugin, PlayerStore store, TempOverrideManager temps) {
-        this.plugin = plugin; this.store = store; this.temps = temps; this.msg = new Msg(plugin);
+    public PTimeCommand(SoloSkies plugin, PlayerStore store, TempOverrideManager temps, ApplyService applyService) {
+        this.plugin = plugin; this.store = store; this.temps = temps; this.applyService = applyService; this.msg = new Msg(plugin);
     }
 
     @Override
@@ -36,7 +38,7 @@ public class PTimeCommand implements TabExecutor {
         if (tail.playerName != null) {
             if (!s.hasPermission("soloskies.ptime.others")) { deny(s); return true; }
             target = Bukkit.getPlayerExact(tail.playerName);
-            if (target == null) { msg.send(s, plugin.getConfig().getString("messages.player-not-found"), null); return true; }
+            if (target == null) { msg.send(s, "player-not-found", null); return true; }
         } else {
             if (!(s instanceof Player)) { s.sendMessage("Console must specify a player."); return true; }
             if (!s.hasPermission("soloskies.ptime.self")) { deny(s); return true; }
@@ -51,9 +53,12 @@ public class PTimeCommand implements TabExecutor {
             case "midnight": return handlePreset(s, target, 18000, "midnight", tail.durationArg);
             case "reset":
                 if (!s.hasPermission("soloskies.ptime.reset")) { deny(s); return true; }
-                temps.cancelTime(target.getUniqueId());
-                target.resetPlayerTime(); store.setTime(target.getUniqueId(), null);
-                msg.send(s, plugin.getConfig().getString("messages.reset-time"), null);
+                applyService.applyTime(target, () -> {
+                    temps.cancelTime(target.getUniqueId());
+                    target.resetPlayerTime();
+                    store.setTime(target.getUniqueId(), null);
+                    msg.send(s, "reset-time", null);
+                });
                 return true;
             case "set":
             case "add":
@@ -65,17 +70,17 @@ public class PTimeCommand implements TabExecutor {
                     if (tail.durationArg != null) {
                         Long durTicks = DurationUtil.parseToTicks(tail.durationArg);
                         if (durTicks == null) { s.sendMessage("Invalid duration. Use 10s, 5m, 2h, 1d."); return true; }
-                        temps.scheduleTempTime(target, val, String.valueOf(val), durTicks, DurationUtil.pretty(tail.durationArg));
+                        applyService.applyTime(target, () -> temps.scheduleTempTime(target, val, String.valueOf(val), durTicks, DurationUtil.pretty(tail.durationArg)));
                         return true;
                     } else {
-                        temps.cancelTime(target.getUniqueId());
-                        target.setPlayerTime(val, false);
-                        store.setTime(target.getUniqueId(), val);
-                        msg.send(s, plugin.getConfig().getString("messages.set-time"),
-                                new String[][]{{"time", String.valueOf(val)}});
-                        // action bar pulse
-                        String ab = plugin.getConfig().getString("messages.action-time-set", "<white>Time:</white> <aqua><time></aqua>");
-                        msg.sendActionBar(target, ab, new String[][]{{"time", String.valueOf(val)}});
+                        long finalVal = val;
+                        applyService.applyTime(target, () -> {
+                            temps.cancelTime(target.getUniqueId());
+                            target.setPlayerTime(finalVal, false);
+                            store.setTime(target.getUniqueId(), finalVal);
+                            msg.send(s, "set-time", new String[][]{{"time", String.valueOf(finalVal)}});
+                            msg.sendActionBar(target, "action-time-set", new String[][]{{"time", String.valueOf(finalVal)}});
+                        });
                         return true;
                     }
                 } else {
@@ -83,17 +88,17 @@ public class PTimeCommand implements TabExecutor {
                     if (tail.durationArg != null) {
                         Long durTicks = DurationUtil.parseToTicks(tail.durationArg);
                         if (durTicks == null) { s.sendMessage("Invalid duration. Use 10s, 5m, 2h, 1d."); return true; }
-                        temps.scheduleTempTime(target, newTime, String.valueOf(newTime), durTicks, DurationUtil.pretty(tail.durationArg));
+                        applyService.applyTime(target, () -> temps.scheduleTempTime(target, newTime, String.valueOf(newTime), durTicks, DurationUtil.pretty(tail.durationArg)));
                         return true;
                     } else {
-                        temps.cancelTime(target.getUniqueId());
-                        target.setPlayerTime(newTime, false);
-                        store.setTime(target.getUniqueId(), newTime);
-                        msg.send(s, plugin.getConfig().getString("messages.add-time"),
-                                new String[][]{{"delta", String.valueOf(val)}, {"time", String.valueOf(newTime)}});
-                        // action bar pulse
-                        String ab = plugin.getConfig().getString("messages.action-time-set", "<white>Time:</white> <aqua><time></aqua>");
-                        msg.sendActionBar(target, ab, new String[][]{{"time", String.valueOf(newTime)}});
+                        long finalNewTime = newTime;
+                        applyService.applyTime(target, () -> {
+                            temps.cancelTime(target.getUniqueId());
+                            target.setPlayerTime(finalNewTime, false);
+                            store.setTime(target.getUniqueId(), finalNewTime);
+                            msg.send(s, "add-time", new String[][]{{"delta", String.valueOf(val)}, {"time", String.valueOf(finalNewTime)}});
+                            msg.sendActionBar(target, "action-time-set", new String[][]{{"time", String.valueOf(finalNewTime)}});
+                        });
                         return true;
                     }
                 }
@@ -107,21 +112,22 @@ public class PTimeCommand implements TabExecutor {
         if (durationArg != null) {
             Long dur = DurationUtil.parseToTicks(durationArg);
             if (dur == null) { s.sendMessage("Invalid duration. Use 10s, 5m, 2h, 1d."); return true; }
-            temps.scheduleTempTime(t, ticks, label, dur, DurationUtil.pretty(durationArg));
+            applyService.applyTime(t, () -> temps.scheduleTempTime(t, ticks, label, dur, DurationUtil.pretty(durationArg)));
             return true;
         }
-        temps.cancelTime(t.getUniqueId());
-        t.setPlayerTime(ticks, false);
-        store.setTime(t.getUniqueId(), ticks);
-        msg.send(s, plugin.getConfig().getString("messages.set-time"), new String[][]{{"time", label}});
-        // action bar pulse
-        String ab = plugin.getConfig().getString("messages.action-time-set", "<white>Time:</white> <aqua><time></aqua>");
-        msg.sendActionBar(t, ab, new String[][]{{"time", label}});
+        long finalTicks = ticks;
+        applyService.applyTime(t, () -> {
+            temps.cancelTime(t.getUniqueId());
+            t.setPlayerTime(finalTicks, false);
+            store.setTime(t.getUniqueId(), finalTicks);
+            msg.send(s, "set-time", new String[][]{{"time", label}});
+            msg.sendActionBar(t, "action-time-set", new String[][]{{"time", label}});
+        });
         return true;
     }
 
     private void deny(CommandSender s) {
-        msg.send(s, plugin.getConfig().getString("messages.no-perms"), null);
+        msg.send(s, "no-perms", null);
     }
 
     @Override

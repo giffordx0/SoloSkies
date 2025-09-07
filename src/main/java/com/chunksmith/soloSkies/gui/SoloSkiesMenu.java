@@ -2,6 +2,7 @@ package com.chunksmith.soloSkies.gui;
 
 import com.chunksmith.soloSkies.SoloSkies;
 import com.chunksmith.soloSkies.store.PlayerStore;
+import com.chunksmith.soloSkies.util.Msg;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -19,15 +20,15 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.List;
-import java.util.Objects;
 
 public class SoloSkiesMenu implements Listener {
     private final SoloSkies plugin;
     private final PlayerStore store;
     private final MiniMessage mm = MiniMessage.miniMessage();
+    private final Msg msg;
 
     public SoloSkiesMenu(SoloSkies plugin, PlayerStore store) {
-        this.plugin = plugin; this.store = store;
+        this.plugin = plugin; this.store = store; this.msg = new Msg(plugin);
     }
 
     public void open(Player p) {
@@ -99,14 +100,12 @@ public class SoloSkiesMenu implements Listener {
 
     private void ok(Player p, String mmMsg) {
         p.playSound(p.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 0.6f, 1.4f);
-        String prefix = plugin.getConfig().getString("messages.prefix","<gray>[SoloSkies]</gray> ");
-        p.sendMessage(mm.deserialize(prefix + mmMsg));
+        p.sendMessage(mm.deserialize(msg.raw("prefix") + mmMsg));
     }
 
     private void deny(Player p, Integer slotIfAny) {
         p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 0.5f);
-        String prefix = plugin.getConfig().getString("messages.prefix","<gray>[SoloSkies]</gray> ");
-        p.sendMessage(mm.deserialize(prefix + "<red>You don't have permission.</red>"));
+        p.sendMessage(mm.deserialize(msg.raw("prefix") + "<red>You don't have permission.</red>"));
         if (slotIfAny != null) {
             flashSlot(p, slotIfAny, statusPane(false, "Denied", "You lack permission"), 20);
         }

@@ -1,6 +1,7 @@
 package com.chunksmith.soloSkies.commands;
 
 import com.chunksmith.soloSkies.SoloSkies;
+import com.chunksmith.soloSkies.manager.ApplyService;
 import com.chunksmith.soloSkies.manager.TempOverrideManager;
 import com.chunksmith.soloSkies.store.PlayerStore;
 import com.chunksmith.soloSkies.util.DurationUtil;
@@ -17,10 +18,11 @@ public class PWeatherCommand implements TabExecutor {
     private final SoloSkies plugin;
     private final PlayerStore store;
     private final TempOverrideManager temps;
+    private final ApplyService applyService;
     private final Msg msg;
 
-    public PWeatherCommand(SoloSkies plugin, PlayerStore store, TempOverrideManager temps) {
-        this.plugin = plugin; this.store = store; this.temps = temps; this.msg = new Msg(plugin);
+    public PWeatherCommand(SoloSkies plugin, PlayerStore store, TempOverrideManager temps, ApplyService applyService) {
+        this.plugin = plugin; this.store = store; this.temps = temps; this.applyService = applyService; this.msg = new Msg(plugin);
     }
 
     @Override
@@ -33,7 +35,7 @@ public class PWeatherCommand implements TabExecutor {
         if (tail.playerName != null) {
             if (!s.hasPermission("soloskies.pweather.others")) { deny(s); return true; }
             target = Bukkit.getPlayerExact(tail.playerName);
-            if (target == null) { msg.send(s, plugin.getConfig().getString("messages.player-not-found"), null); return true; }
+            if (target == null) { msg.send(s, "player-not-found", null); return true; }
         } else {
             if (!(s instanceof Player)) { s.sendMessage("Console must specify a player."); return true; }
             if (!s.hasPermission("soloskies.pweather.self")) { deny(s); return true; }
@@ -47,44 +49,52 @@ public class PWeatherCommand implements TabExecutor {
                 if (tail.durationArg != null) {
                     Long dur = DurationUtil.parseToTicks(tail.durationArg);
                     if (dur == null) { s.sendMessage("Invalid duration. Use 10s, 5m, 2h, 1d."); return true; }
-                    temps.scheduleTempWeather(target, WeatherType.CLEAR, "sun", dur, DurationUtil.pretty(tail.durationArg));
+                    applyService.applyWeather(target, () -> temps.scheduleTempWeather(target, WeatherType.CLEAR, "sun", dur, DurationUtil.pretty(tail.durationArg)));
                     return true;
                 }
-                temps.cancelWeather(target.getUniqueId());
-                target.setPlayerWeather(WeatherType.CLEAR);
-                store.setWeather(target.getUniqueId(), WeatherType.CLEAR);
-                sendSet(s, target, "sun");
+                applyService.applyWeather(target, () -> {
+                    temps.cancelWeather(target.getUniqueId());
+                    target.setPlayerWeather(WeatherType.CLEAR);
+                    store.setWeather(target.getUniqueId(), WeatherType.CLEAR);
+                    sendSet(s, target, "sun");
+                });
                 return true;
             case "rain":
                 if (tail.durationArg != null) {
                     Long dur = DurationUtil.parseToTicks(tail.durationArg);
                     if (dur == null) { s.sendMessage("Invalid duration. Use 10s, 5m, 2h, 1d."); return true; }
-                    temps.scheduleTempWeather(target, WeatherType.DOWNFALL, "rain", dur, DurationUtil.pretty(tail.durationArg));
+                    applyService.applyWeather(target, () -> temps.scheduleTempWeather(target, WeatherType.DOWNFALL, "rain", dur, DurationUtil.pretty(tail.durationArg)));
                     return true;
                 }
-                temps.cancelWeather(target.getUniqueId());
-                target.setPlayerWeather(WeatherType.DOWNFALL);
-                store.setWeather(target.getUniqueId(), WeatherType.DOWNFALL);
-                sendSet(s, target, "rain");
+                applyService.applyWeather(target, () -> {
+                    temps.cancelWeather(target.getUniqueId());
+                    target.setPlayerWeather(WeatherType.DOWNFALL);
+                    store.setWeather(target.getUniqueId(), WeatherType.DOWNFALL);
+                    sendSet(s, target, "rain");
+                });
                 return true;
             case "thunder":
                 if (tail.durationArg != null) {
                     Long dur = DurationUtil.parseToTicks(tail.durationArg);
                     if (dur == null) { s.sendMessage("Invalid duration. Use 10s, 5m, 2h, 1d."); return true; }
-                    temps.scheduleTempWeather(target, WeatherType.DOWNFALL, "thunder", dur, DurationUtil.pretty(tail.durationArg));
+                    applyService.applyWeather(target, () -> temps.scheduleTempWeather(target, WeatherType.DOWNFALL, "thunder", dur, DurationUtil.pretty(tail.durationArg)));
                     return true;
                 }
-                temps.cancelWeather(target.getUniqueId());
-                target.setPlayerWeather(WeatherType.DOWNFALL);
-                store.setWeather(target.getUniqueId(), WeatherType.DOWNFALL);
-                sendSet(s, target, "thunder");
+                applyService.applyWeather(target, () -> {
+                    temps.cancelWeather(target.getUniqueId());
+                    target.setPlayerWeather(WeatherType.DOWNFALL);
+                    store.setWeather(target.getUniqueId(), WeatherType.DOWNFALL);
+                    sendSet(s, target, "thunder");
+                });
                 return true;
             case "reset":
                 if (!s.hasPermission("soloskies.pweather.reset")) { deny(s); return true; }
-                temps.cancelWeather(target.getUniqueId());
-                target.resetPlayerWeather();
-                store.setWeather(target.getUniqueId(), null);
-                msg.send(s, plugin.getConfig().getString("messages.reset-weather"), null);
+                applyService.applyWeather(target, () -> {
+                    temps.cancelWeather(target.getUniqueId());
+                    target.resetPlayerWeather();
+                    store.setWeather(target.getUniqueId(), null);
+                    msg.send(s, "reset-weather", null);
+                });
                 return true;
             default:
                 s.sendMessage("Unknown subcommand.");
@@ -93,15 +103,12 @@ public class PWeatherCommand implements TabExecutor {
     }
 
     private void sendSet(CommandSender s, Player target, String w) {
-        msg.send(s, plugin.getConfig().getString("messages.set-weather"),
-                new String[][]{{"weather", w}});
-        // action bar pulse
-        String ab = plugin.getConfig().getString("messages.action-weather-set", "<white>Weather:</white> <aqua><weather></aqua>");
-        msg.sendActionBar(target, ab, new String[][]{{"weather", w}});
+        msg.send(s, "set-weather", new String[][]{{"weather", w}});
+        msg.sendActionBar(target, "action-weather-set", new String[][]{{"weather", w}});
     }
 
     private void deny(CommandSender s) {
-        msg.send(s, plugin.getConfig().getString("messages.no-perms"), null);
+        msg.send(s, "no-perms", null);
     }
 
     @Override
